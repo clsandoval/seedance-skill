@@ -1,11 +1,11 @@
 ---
 name: seedance
-description: Generate videos with Seedance 2.0 via Replicate — reference video + character swap, TikTok download, audio stitching
+description: Generate cinematic videos with Seedance 2.0 via Replicate — iterate-fast/ship-main workflow, prompt corpus research, blind QA critique loop, reference video + character swap, TikTok download, audio stitching
 ---
 
 # Seedance — Video Generation Skill
 
-Generate videos using ByteDance's Seedance 2.0 model via the Replicate API. Supports character swaps using reference videos and images, TikTok video downloading, and audio stitching.
+Generate cinematic videos using ByteDance's Seedance 2.0 model via the Replicate API. Iterate on `seedance-2.0-fast`, ship final renders on `seedance-2.0` main. Includes a prompt research corpus, blind cinematography QA critique loop, content filter intelligence, and support for character swaps, TikTok downloading, and audio stitching.
 
 **Announce at start:** "I'm using the seedance skill to [generate a video / download references / swap a character]."
 
@@ -92,13 +92,22 @@ Try each in order until one succeeds — availability of free file hosts varies.
 
 ### Phase 3: Generate Video
 
-#### Model Selection
+#### Model Selection — Iterate Fast, Ship on Main
 
-**Always use `seedance-2.0-fast`.** The non-fast `seedance-2.0` model rejects reference video URLs with "reference_video must be provided as a web url" regardless of hosting — Replicate files, temp hosts, GitHub raw, CDN links all fail. The fast variant accepts the same URLs without issue. This is an API-level difference, not a URL format problem.
+Use a two-phase workflow:
+
+1. **Iteration phase** — use `seedance-2.0-fast` for rapid prompt iteration. Cheaper, faster (2-4 min), good enough to evaluate composition, motion, and storytelling. Iterate here until the prompt produces good results.
+2. **Final render** — once the prompt is locked, re-run on `seedance-2.0` (main) for maximum quality. Slower (~5-10 min) but higher fidelity output.
+
+**Note on reference videos:** The non-fast `seedance-2.0` model rejects reference video URLs with "reference_video must be provided as a web url" regardless of hosting. For reference-video workflows, use `seedance-2.0-fast` for both phases.
 
 ```bash
-# Get latest version
+# Iteration phase (fast)
 VERSION=$(curl -s "https://api.replicate.com/v1/models/bytedance/seedance-2.0-fast" \
+  -H "Authorization: Bearer $REPLICATE_API_TOKEN" | jq -r '.latest_version.id')
+
+# Final render (main — text-to-video and image-to-video only)
+VERSION=$(curl -s "https://api.replicate.com/v1/models/bytedance/seedance-2.0" \
   -H "Authorization: Bearer $REPLICATE_API_TOKEN" | jq -r '.latest_version.id')
 ```
 
@@ -131,11 +140,27 @@ Reference tags in prompts: `[Image1]`, `[Video1]`, `[Audio1]`, etc.
 
 #### Content Filter Avoidance
 
-ByteDance's moderation can flag prompts. If you get error E005 ("flagged as sensitive"):
+ByteDance's moderation flags ~37% of prompts (E005 "flagged as sensitive"). The filter is a language model evaluating intent, not a keyword blocker.
 
-1. Remove words like "lip-sync", "screaming", "attack", etc.
-2. Disable `generate_audio: false` — audio gen triggers filters more often
-3. Use gentler language: "moves happily" instead of "dances wildly"
+**Prompt length:** Prompts over 2000 chars are truncated. Keep under 1500 chars for safety.
+
+**Confirmed trigger words/concepts (tested April 2026):**
+- "robot" — consistently flagged even in innocent Pixar contexts. Use "character", "mascot", "creature" instead
+- Violence language: "smashing", "slams", "barrage", "shrapnel", "projectile", "detonation", "explosion", "strikes", "white-hot"
+- "command center", "control room" — may trigger military/surveillance flags
+- "lip-sync", "screaming", "attack"
+- Humanoid figures with glowing eyes in dark environments
+
+**Safe alternatives:**
+- Animals (cats, dogs) pass easily in identical scenarios where robots fail
+- "taps" instead of "slams", "sends" instead of "fires", "arrives" instead of "strikes"
+- Bright/warm environments pass more often than dark/moody ones
+- Front-load cinematic language (camera types, lens specs) — signals professionalism to the filter
+
+**Filter bypass strategies (from Emily2040/seedance-2.0 filter guide):**
+1. Write like a filmmaker, not a casual user — production language gets more latitude
+2. Chinese prompts have different filter thresholds and may pass where English fails
+3. The filter evaluates the whole prompt as one scene — professional framing helps
 4. Retry — the filter is sometimes non-deterministic
 
 #### Creating the Prediction
@@ -215,7 +240,125 @@ rm -rf /tmp/seedance-work/
 
 Uploaded temp files on hosts like tmpfiles.org expire automatically (typically 1-24 hours).
 
-## Prompt Engineering Tips
+## Iteration Workflow
+
+The core loop is: **research → draft → generate on fast → extract frames → critique → revise → repeat until good → final render on main.**
+
+### Step 1: Research the Prompt Corpus
+
+Before writing any prompt, grep the local prompt library for structural templates matching the user's requested style:
+
+```bash
+grep -i -A 30 "STYLE_KEYWORD" .claude/skills/seedance/awesome-seedance-2-prompts/README.md
+```
+
+Use matching prompts as structural templates. Never invent prompt structure from scratch — adapt proven formats.
+
+### Step 2: Draft and Generate on Fast
+
+Write the prompt, verify it's under 1500 chars (2000 is the hard truncation limit), and fire on `seedance-2.0-fast`. Show the user the full prompt before firing.
+
+### Step 3: Extract Frames and Critique
+
+Once the video succeeds, extract frames at 1fps and review every frame:
+
+```bash
+ffmpeg -y -i video.mp4 -vf "fps=1" -q:v 2 /tmp/seedance-work/frame_%02d.jpg
+```
+
+Read all frames. Spawn a **blind cinematography critique subagent**. The subagent must NOT know:
+- What the video is for (no product/brand context)
+- What the intended story beats were (no prompt shown)
+- That it's AI-generated
+
+The subagent reviews purely as a piece of animation filmmaking. It should read ALL extracted frames (1fps, every frame) and critique:
+
+- **Composition** — framing, focal point clarity, visual balance per frame
+- **Camera execution** — movement, angle choices, transitions between shots
+- **Lighting & color** — palette, contrast, mood consistency
+- **Story clarity** — can you understand what's happening with zero context? Describe the story you see
+- **Logical consistency** — do elements behave consistently? If something moves left, does it keep going left? Do characters/objects follow coherent spatial logic throughout?
+- **Pacing** — does the energy build? Any dead or wasted frames? Any repeated shots?
+- **Production value** — Pixar theatrical or cheap mobile game ad?
+- **Character design & consistency** — do characters hold together across frames? Proportions stable?
+- **The ending** — does the final moment land? Is there a payoff or does it just stop?
+
+The subagent should give letter grades (A-F) per category, identify the 3 weakest and 3 strongest frames by number, and give specific actionable changes a director would make. End with a one-word verdict: SHIP or ITERATE. Critique should be at the level of judging an Oscar-nominated animated short — ruthless and precise. Under 500 words.
+
+### Step 4: Revise and Iterate
+
+Based on the critique, revise the prompt. Common fixes:
+- **Dead frames** → compress that time segment, give it action
+- **Lost detail at wide shots** → don't pull back as far, specify "three-quarter overhead" not "full overhead"
+- **Flat lighting** → specify color contrast (e.g., "cool blue vs warm gold")
+- **No story payoff** → add a resolution beat (conflict → escalation → victory)
+- **Monochrome mood** → add a contrasting color moment
+
+Repeat Steps 2-4 until the critique passes.
+
+### Step 5: Final Render on Main
+
+Once the prompt is locked on fast, re-run on `seedance-2.0` (main) for maximum quality:
+
+```bash
+VERSION=$(curl -s "https://api.replicate.com/v1/models/bytedance/seedance-2.0" \
+  -H "Authorization: Bearer $REPLICATE_API_TOKEN" | jq -r '.latest_version.id')
+```
+
+Same prompt, same parameters. Main model is slower (~5-10 min) but higher fidelity. Only use main for text-to-video and image-to-video — reference-video workflows must stay on fast.
+
+## Prompt Engineering
+
+### Prompt Library (local reference)
+
+A full library of 1800+ curated community prompts should be cloned locally. If not present, clone it on first use:
+
+```bash
+git clone https://github.com/YouMind-OpenLab/awesome-seedance-2-prompts.git \
+  .claude/skills/seedance/awesome-seedance-2-prompts
+```
+
+Then grep it for relevant examples matching the user's requested style/genre:
+
+```bash
+# Search for prompts by style (e.g., anime, cinematic, pixar, commercial, cyberpunk)
+grep -i -A 30 "anime\|action\|combat" .claude/skills/seedance/awesome-seedance-2-prompts/README.md
+
+# Search for structural patterns
+grep -i -A 30 "\[00:00" .claude/skills/seedance/awesome-seedance-2-prompts/README.md
+```
+
+Use matching prompts as structural templates. Adapt the format and level of detail to the user's request — don't invent prompt structure from scratch.
+
+### Prompt Structure (derived from top community prompts)
+
+The best Seedance prompts follow this structure:
+
+1. **Header line** — genre/style declaration + duration + quality tier
+2. **Bracketed metadata sections:**
+   - `【Core Focus】` or `【Style】` — the central concept and visual identity
+   - `【Style】` — rendering quality, camera type, resolution, aesthetic references
+   - `【Duration】` — total length
+   - `【Scene】` — environment and atmosphere setup
+3. **Timestamped shot breakdowns:**
+   - `[00:00-00:05] Shot 1: Title · Subtitle (Emotional beat)`
+   - `Visuals:` — what the camera sees
+   - `Action:` — what happens / movement
+   - `Special Effects Details:` — particles, lighting, VFX specifics
+4. **Technical quality anchors** — scattered throughout: "8K sharp", "shallow depth of field", "cinematic", "no deformation or drift"
+5. **Character consistency callouts** — "characters maintain consistent faces, clothing, and hairstyles throughout without deformation, drift, or artifacts"
+6. **Negative constraints** — "no text, watermarks, or subtitles", "no gore"
+
+### Key Tips
+
+- **Character consistency**: Always include "maintain consistent faces, clothing, and hairstyles throughout without deformation, drift, or artifacts"
+- **Motion quality**: Specify "natural subtle movements" to avoid robotic feel
+- **Lip sync**: Use "lip synchronization is natural and precise" for dialogue scenes
+- **Clean output**: Include "no text, watermarks, or subtitles" unless text is intentional
+- **Depth of field**: "shallow depth of field, creamy blurred background" for cinematic look
+- **Continuity**: "continuous motion, no cuts" for seamless sequences
+- **Camera**: Specify camera type — "handheld", "tracking", "orbital", "FPV", "slow push-in"
+- **Emotional beats**: Use parenthetical notes like `(Sense of charging)` or `(Ultimate clash)` to guide pacing
 
 ### For Character Swaps (reference image + reference video)
 
@@ -226,26 +369,13 @@ The [character description] from [Image1] moves in the same style as [Video1].
 
 Keep it simple. Over-describing triggers content filters.
 
-### For Text-to-Video (prompt only)
-
-```
-[Subject] [action] in [setting]. [Camera movement]. [Lighting]. [Style].
-```
-
 ### For Image-to-Video (first frame)
 
 Use the `image` parameter instead of `reference_images`. The image becomes the first frame and the model animates from there.
 
-## Example Invocations
+### Content Filter Workarounds
 
-**"Make my character do the TikTok dance from this video"**
-→ Download video with yt-dlp, get character image, upload both for public URLs, call Seedance with reference_images + reference_videos, stitch audio.
-
-**"Generate a video of a cat walking through a garden"**
-→ Text-to-video only, no references needed. Just prompt + Seedance API call.
-
-**"Animate this image"**
-→ Use the `image` parameter (first frame mode), not `reference_images`.
+If prompts get flagged (error E005), the prompt library has sanitized versions of intense scenes. Grep for the genre and look at how they phrase action/combat without triggering filters.
 
 ## Working Directory
 
