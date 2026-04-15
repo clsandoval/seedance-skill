@@ -36,8 +36,8 @@ Just ask Claude Code:
 
 ## Learned the hard way
 
-- **Use `seedance-2.0-fast`, not `seedance-2.0`** — the non-fast model rejects reference video URLs that the fast model accepts fine
-- **Replicate file API URLs don't work** as Seedance reference inputs — ByteDance's backend can't fetch them (auth required). Use GitHub raw URLs instead
-- **Temp file hosts don't work either** — catbox.moe, 0x0.st, tmpfiles.org all failed. GitHub raw is the reliable path
+- **Use `seedance-2.0-fast`, not `seedance-2.0`** — the non-fast model rejects ALL reference video URLs ("must be provided as a web url") regardless of hosting. The fast model accepts the same URLs fine. This is an API-level issue, not a URL format problem.
+- **Any public URL works for the fast model** — GitHub raw, CDN links, cloud storage signed URLs, temp file hosts. Just needs to be a direct download without auth.
+- **Replicate file API URLs don't work** — they require auth headers to download, which Seedance's backend doesn't send
 - **Content filters are aggressive** — disable `generate_audio` and use mild language if you get E005 errors
 - **Audio stitching is usually needed** — generate video without audio, then mux the original audio track with ffmpeg

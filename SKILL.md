@@ -90,9 +90,7 @@ Then read the frames to describe the motion, style, and content for the prompt.
 
 ### Phase 2: Upload Assets to Public URLs
 
-**Seedance requires publicly accessible URLs for reference inputs.** The Replicate file API URLs and temporary file hosts often don't work. Use GitHub raw URLs.
-
-You need a GitHub repo to host temporary files. The user's repo or any repo they have push access to works.
+**Seedance requires publicly accessible URLs for reference inputs.** Any direct-download URL works — GitHub raw URLs, cloud storage signed URLs, CDN links, etc. The key requirement is that the URL returns the file directly (no auth headers, no redirects to login pages).
 
 ```bash
 # Base64 encode the file
@@ -128,7 +126,7 @@ curl -s -X DELETE "https://api.github.com/repos/OWNER/REPO/contents/tmp/FILENAME
 
 #### Model Selection
 
-Use **`seedance-2.0-fast`** by default. The non-fast `seedance-2.0` frequently rejects reference video URLs that the fast variant accepts.
+**Always use `seedance-2.0-fast`.** The non-fast `seedance-2.0` model rejects reference video URLs with "reference_video must be provided as a web url" regardless of hosting — Replicate files, temp hosts, GitHub raw, CDN links all fail. The fast variant accepts the same URLs without issue. This is an API-level difference, not a URL format problem.
 
 ```bash
 # Get latest version
