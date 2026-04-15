@@ -69,37 +69,26 @@ Then read the frames to describe the motion, style, and content for the prompt.
 
 ### Phase 2: Upload Assets to Public URLs
 
-**Seedance requires publicly accessible URLs for reference inputs.** Any direct-download URL works — GitHub raw URLs, cloud storage signed URLs, CDN links, etc. The key requirement is that the URL returns the file directly (no auth headers, no redirects to login pages).
+**Seedance requires publicly accessible URLs for reference inputs.** Any direct-download URL works — the key requirement is that the URL returns the file directly without auth headers.
+
+Upload local files to a temporary file host to get a public URL:
 
 ```bash
-# Base64 encode the file
-python3 -c "
-import json, base64
-with open('LOCAL_FILE', 'rb') as f:
-    b64 = base64.b64encode(f.read()).decode()
-print(json.dumps({'message': 'tmp: seedance asset', 'content': b64}))
-" > /tmp/upload-payload.json
+# Option 1: tmpfiles.org (preferred — returns direct download URL)
+RAW_URL=$(curl -s -F "file=@LOCAL_FILE" https://tmpfiles.org/api/v1/upload | jq -r '.data.url')
+# Convert to direct download URL
+PUBLIC_URL=$(echo "$RAW_URL" | sed 's|tmpfiles.org/|tmpfiles.org/dl/|')
 
-# Upload via GitHub API
-curl -s -X PUT "https://api.github.com/repos/OWNER/REPO/contents/tmp/FILENAME" \
-  -H "Authorization: token $GITHUB_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d @/tmp/upload-payload.json | jq '{download_url: .content.download_url}'
+# Option 2: file.io (single-use download link)
+PUBLIC_URL=$(curl -s -F "file=@LOCAL_FILE" https://file.io | jq -r '.link')
+
+# Option 3: litterbox.catbox.moe (temp files, 1h-72h expiry)
+PUBLIC_URL=$(curl -s -F "reqtype=fileupload" -F "time=24h" -F "fileToUpload=@LOCAL_FILE" https://litterbox.catbox.moe/resources/internals/api.php)
 ```
 
-The resulting URL format: `https://raw.githubusercontent.com/OWNER/REPO/BRANCH/tmp/FILENAME`
+Try each in order until one succeeds — availability of free file hosts varies. The URL just needs to be a direct download link accessible without authentication.
 
-**Important:** Clean up these temp files after the job is done:
-```bash
-# Get the file SHA first
-SHA=$(curl -s "https://api.github.com/repos/OWNER/REPO/contents/tmp/FILENAME" \
-  -H "Authorization: token $GITHUB_TOKEN" | jq -r '.sha')
-
-curl -s -X DELETE "https://api.github.com/repos/OWNER/REPO/contents/tmp/FILENAME" \
-  -H "Authorization: token $GITHUB_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d "{\"message\": \"cleanup: remove seedance temp file\", \"sha\": \"$SHA\"}"
-```
+**Note:** Replicate file API URLs (`https://api.replicate.com/v1/files/...`) do NOT work — they require auth headers that Seedance's backend doesn't send.
 
 ### Phase 3: Generate Video
 
@@ -218,18 +207,13 @@ ffmpeg -y -i input.mp4 -vn -q:a 2 output.mp3
 
 ### Phase 5: Cleanup
 
-Remove temporary files from GitHub:
+Remove local temporary files:
 
 ```bash
-for FILE in tmp/reference.mp4 tmp/character.jpg; do
-  SHA=$(curl -s "https://api.github.com/repos/OWNER/REPO/contents/$FILE" \
-    -H "Authorization: token $GITHUB_TOKEN" | jq -r '.sha // empty')
-  [ -n "$SHA" ] && curl -s -X DELETE "https://api.github.com/repos/OWNER/REPO/contents/$FILE" \
-    -H "Authorization: token $GITHUB_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d "{\"message\": \"cleanup: remove seedance temp\", \"sha\": \"$SHA\"}"
-done
+rm -rf /tmp/seedance-work/
 ```
+
+Uploaded temp files on hosts like tmpfiles.org expire automatically (typically 1-24 hours).
 
 ## Prompt Engineering Tips
 

@@ -20,7 +20,6 @@ Or clone and reference the SKILL.md path in your Claude Code settings.
 ## Requirements
 
 - `REPLICATE_API_TOKEN` — [Get one here](https://replicate.com/account/api-tokens)
-- `GITHUB_TOKEN` — For uploading temp assets (Seedance needs public URLs)
 - `yt-dlp`, `ffmpeg`, `jq`, `curl`
 
 ## Usage
