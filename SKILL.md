@@ -254,11 +254,32 @@ grep -i -A 30 "STYLE_KEYWORD" .claude/skills/seedance/awesome-seedance-2-prompts
 
 Use matching prompts as structural templates. Never invent prompt structure from scratch — adapt proven formats.
 
-### Step 2: Draft and Generate on Fast
+### Step 2: Draft and Storyboard QA
 
-Write the prompt, verify it's under 1500 chars (2000 is the hard truncation limit), and fire on `seedance-2.0-fast`. Show the user the full prompt before firing.
+Write the prompt, then spawn a **blind storyboard QA subagent** BEFORE generating. The subagent must NOT know what product or brand this is for — it reviews purely as a film storyboard.
 
-### Step 3: Extract Frames and Critique
+Pass the subagent ONLY the raw prompt text. It should critique:
+
+- **Narrative coherence** — does the story make logical sense moment to moment? Would a viewer follow it?
+- **Directional consistency** — if things move outward, do they keep moving outward? Any contradictions in spatial flow?
+- **Time budget** — is each beat given enough seconds to register, or is it cramped? Is any beat given too long?
+- **Transition logic** — are jumps between shots/scales smooth or jarring? Are there impossible camera moves?
+- **Filter risk** — flag any words/concepts likely to trigger content moderation (violence, "robot", military, etc.)
+- **Char count** — will this fit under 1500 chars after cleanup? If over, what to cut?
+- **Ambiguity** — anything a video model could misinterpret? Vague descriptions that could go wrong?
+- **The ending** — does the storyboard resolve, or does it just stop?
+
+The subagent should give a verdict: **GENERATE** or **REVISE**, with specific line-level fixes if revise. Under 300 words.
+
+After the storyboard QA passes, verify the prompt is under 1500 chars and fire on `seedance-2.0-fast`. Show the user the full prompt before firing.
+
+### Step 3: Generate on Fast
+
+Fire on `seedance-2.0-fast`. Poll every 60-90 seconds.
+
+### Step 4: Extract Frames and Post-Render Critique
+
+### Step 4 (cont.): Extract Frames and Post-Render Critique
 
 Once the video succeeds, extract frames at 1fps and review every frame:
 
@@ -285,7 +306,7 @@ The subagent reviews purely as a piece of animation filmmaking. It should read A
 
 The subagent should give letter grades (A-F) per category, identify the 3 weakest and 3 strongest frames by number, and give specific actionable changes a director would make. End with a one-word verdict: SHIP or ITERATE. Critique should be at the level of judging an Oscar-nominated animated short — ruthless and precise. Under 500 words.
 
-### Step 4: Revise and Iterate
+### Step 5: Revise and Iterate
 
 Based on the critique, revise the prompt. Common fixes:
 - **Dead frames** → compress that time segment, give it action
@@ -294,9 +315,9 @@ Based on the critique, revise the prompt. Common fixes:
 - **No story payoff** → add a resolution beat (conflict → escalation → victory)
 - **Monochrome mood** → add a contrasting color moment
 
-Repeat Steps 2-4 until the critique passes.
+Repeat Steps 3-5 until the critique passes. Re-run storyboard QA (Step 2) if the prompt changes substantially.
 
-### Step 5: Final Render on Main
+### Step 6: Final Render on Main
 
 Once the prompt is locked on fast, re-run on `seedance-2.0` (main) for maximum quality:
 
