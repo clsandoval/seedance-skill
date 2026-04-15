@@ -1,11 +1,11 @@
 ---
 name: seedance
-description: Generate videos with Seedance 2.0 via Replicate — reference video + character swap, TikTok download, audio stitching, Telegram delivery
+description: Generate videos with Seedance 2.0 via Replicate — reference video + character swap, TikTok download, audio stitching
 ---
 
 # Seedance — Video Generation Skill
 
-Generate videos using ByteDance's Seedance 2.0 model via the Replicate API. Supports character swaps using reference videos and images, TikTok video downloading, audio stitching, and Telegram delivery.
+Generate videos using ByteDance's Seedance 2.0 model via the Replicate API. Supports character swaps using reference videos and images, TikTok video downloading, and audio stitching.
 
 **Announce at start:** "I'm using the seedance skill to [generate a video / download references / swap a character]."
 
@@ -21,12 +21,7 @@ Generate videos using ByteDance's Seedance 2.0 model via the Replicate API. Supp
 ### API Keys (check before proceeding)
 
 ```bash
-# Required
 echo "REPLICATE_API_TOKEN=${REPLICATE_API_TOKEN:+SET}${REPLICATE_API_TOKEN:-UNSET}"
-
-# Optional — for Telegram delivery
-echo "TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:+SET}${TELEGRAM_BOT_TOKEN:-UNSET}"
-echo "TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:+SET}${TELEGRAM_CHAT_ID:-UNSET}"
 ```
 
 If `REPLICATE_API_TOKEN` is not set, stop and ask the user to set it.
@@ -51,7 +46,7 @@ If any are missing, tell the user to install them.
 The user provides some combination of:
 
 1. **Reference video** — a URL (TikTok, YouTube, direct link) or local file path
-2. **Character image** — a local file, URL, or sent via Telegram
+2. **Character image** — a local file path or URL
 3. **Prompt** — what the generated video should look like
 
 #### Downloading Reference Videos
@@ -60,22 +55,6 @@ For TikTok/YouTube URLs, use yt-dlp:
 
 ```bash
 yt-dlp --no-warnings -o "/tmp/seedance-work/reference.%(ext)s" "<URL>"
-```
-
-#### Receiving Images from Telegram
-
-If the user says they'll send an image via Telegram, poll for it:
-
-```bash
-# Get latest photo message
-FILE_ID=$(curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?limit=5&offset=-5" \
-  | jq -r '[.result[] | select(.message.photo != null)] | last | .message.photo[-1].file_id')
-
-FILE_PATH=$(curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getFile?file_id=$FILE_ID" \
-  | jq -r '.result.file_path')
-
-curl -s "https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/$FILE_PATH" \
-  -o /tmp/seedance-work/character.jpg
 ```
 
 #### Analyzing Reference Videos
@@ -237,29 +216,7 @@ If the user just wants the audio track:
 ffmpeg -y -i input.mp4 -vn -q:a 2 output.mp3
 ```
 
-### Phase 5: Delivery
-
-#### Telegram
-
-```bash
-# Send video
-curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendVideo" \
-  -F chat_id="${TELEGRAM_CHAT_ID}" \
-  -F video=@"output.mp4" \
-  -F caption="$CAPTION"
-
-# Send audio only
-curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendAudio" \
-  -F chat_id="${TELEGRAM_CHAT_ID}" \
-  -F audio=@"output.mp3" \
-  -F title="$TITLE"
-```
-
-#### Local
-
-Report the file path: `/tmp/seedance-work/output.mp4`
-
-### Phase 6: Cleanup
+### Phase 5: Cleanup
 
 Remove temporary files from GitHub:
 
@@ -298,7 +255,7 @@ Use the `image` parameter instead of `reference_images`. The image becomes the f
 ## Example Invocations
 
 **"Make my character do the TikTok dance from this video"**
-→ Download video with yt-dlp, get character image, upload both to GitHub, call Seedance with reference_images + reference_videos, stitch audio, send to Telegram.
+→ Download video with yt-dlp, get character image, upload both for public URLs, call Seedance with reference_images + reference_videos, stitch audio.
 
 **"Generate a video of a cat walking through a garden"**
 → Text-to-video only, no references needed. Just prompt + Seedance API call.

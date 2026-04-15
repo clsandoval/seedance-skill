@@ -7,7 +7,6 @@ Claude Code skill for generating videos with [Seedance 2.0](https://replicate.co
 - Download reference videos from TikTok/YouTube via yt-dlp
 - Swap characters into existing video choreography using Seedance 2.0
 - Stitch audio from original reference onto generated video
-- Deliver results via Telegram or local file
 
 ## Install
 
@@ -23,7 +22,6 @@ Or clone and reference the SKILL.md path in your Claude Code settings.
 - `REPLICATE_API_TOKEN` — [Get one here](https://replicate.com/account/api-tokens)
 - `GITHUB_TOKEN` — For uploading temp assets (Seedance needs public URLs)
 - `yt-dlp`, `ffmpeg`, `jq`, `curl`
-- Optional: `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` for Telegram delivery
 
 ## Usage
 
