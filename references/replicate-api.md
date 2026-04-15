@@ -118,16 +118,6 @@ Statuses: `starting` → `processing` → `succeeded` | `failed`
 
 On success, `output` contains a direct download URL for the generated MP4.
 
-## Parallel Predictions on Main Model
-
-When shipping a prompt to main, fire **two predictions in parallel**:
-1. **Full prompt** — exact copy of the prompt, same seed
-2. **Intent-only prompt** — strip to bare creative intent under 250 chars (no timestamps, no camera direction, just the scene concept + style + references)
-
-If both pass, compare results. If only one passes, use that. If both fail, apply E005 retry policy.
-
-**Max 3 concurrent predictions** — never fire more than 3 at once.
-
 ## E005 Content Filter Retry Policy
 
 The content filter is non-deterministic. The same prompt + references can fail then pass on retry. **NEVER** drop user-provided reference images or strip creative intent after a filter rejection. Instead:
@@ -139,9 +129,11 @@ The content filter is non-deterministic. The same prompt + references can fail t
    - Effects: "aura" <-> "glow" <-> "rim light" <-> "shimmer"
    - Mood: "intense focus" <-> "deep concentration" <-> "steady gaze"
    - Scale: "luminous" <-> "glowing" <-> "radiant" <-> "brilliant"
-3. Fire 2-3 retries in parallel with different seed + synonym combos
+3. Retry sequentially — one prediction at a time, check result before firing next
 4. Retry up to 10 times before considering any structural prompt changes
 5. Never remove user-provided reference images
+
+**Max 3 concurrent predictions** — never fire more than 3 at once.
 
 ## Post-Processing
 
