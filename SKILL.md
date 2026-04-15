@@ -157,11 +157,14 @@ ByteDance's moderation flags ~37% of prompts (E005 "flagged as sensitive"). The 
 - Bright/warm environments pass more often than dark/moody ones
 - Front-load cinematic language (camera types, lens specs) — signals professionalism to the filter
 
+**Main model vs fast model filters:** The main `seedance-2.0` model has significantly stricter content filtering than `seedance-2.0-fast`. Prompts that pass on fast will frequently fail on main. For final renders on main, **dramatically shorten the prompt** — strip all cinematic direction, timestamps, and detail down to the bare concept (under 250 chars works best). The main model needs less guidance anyway since it produces higher quality output.
+
 **Filter bypass strategies (from Emily2040/seedance-2.0 filter guide):**
 1. Write like a filmmaker, not a casual user — production language gets more latitude
 2. Chinese prompts have different filter thresholds and may pass where English fails
 3. The filter evaluates the whole prompt as one scene — professional framing helps
-4. Retry — the filter is sometimes non-deterministic
+4. Retry with different seeds — the filter is sometimes non-deterministic
+5. For main model: use ultra-short prompts (under 250 chars), fire up to 3 attempts with different seeds
 
 #### Creating the Prediction
 
