@@ -1,516 +1,94 @@
 ---
-name: seedance
-description: Generate cinematic videos with Seedance 2.0 via Replicate — structured brainstorm with asset gathering, iterate-fast/ship-main workflow, prompt corpus research, blind QA critique loop, reference images for venue/brand/props, content filter intelligence, character swap, TikTok download, audio stitching
+name: seedance-20
+description: 'Generate and direct cinematic AI videos with Seedance 2.0 (ByteDance/Dreamina/Jimeng). Covers text-to-video, image-to-video, video-to-video, and reference-to-video workflows with @Tag asset references, multi-character scenes, audio design, and post-processing. Use when making AI video, writing Seedance prompts, directing a scene, fixing generation errors, or building an AI short film, product ad, or music video.'
+license: MIT
+user-invocable: true
+user-invokable: true
+tags: ["ai-video", "filmmaking", "bytedance", "seedance", "multimodal", "lip-sync", "openclaw", "antigravity", "gemini-cli", "firebase", "codex", "cursor", "windsurf", "opencode"]
+metadata: {"version": "5.0.0", "updated": "2026-03-03", "openclaw": {"emoji": "🎬", "homepage": "https://github.com/Emily2040/seedance-2.0"}, "antigravity": {"emoji": "🎬", "homepage": "https://github.com/Emily2040/seedance-2.0"}, "gemini-cli": {"emoji": "🎬", "homepage": "https://github.com/Emily2040/seedance-2.0"}, "firebase": {"emoji": "🎬", "homepage": "https://github.com/Emily2040/seedance-2.0"}, "author": "Emily (@iamemily2050)", "repository": "https://github.com/Emily2040/seedance-2.0"}
 ---
 
-# Seedance — Video Generation Skill
+# seedance-20
 
-Generate cinematic videos using ByteDance's Seedance 2.0 model via the Replicate API. Starts with a **structured brainstorm** to gather reference assets (venues, logos, props, brand colors) that dramatically improve output quality. Iterate on `seedance-2.0-fast`, ship final renders on `seedance-2.0` main. Includes a prompt research corpus, blind cinematography QA critique loop, content filter intelligence, and support for character swaps, TikTok downloading, and audio stitching.
+Seedance 2.0 quad-modal AI filmmaking (T2V · I2V · V2V · R2V).
 
-**Announce at start:** "I'm using the seedance skill to [generate a video / download references / swap a character]."
+## The v5.0 Philosophy
 
-## When to Use
+> **Direct the model. Don't micro-manage it.** Tell it WHAT you want and HOW it should FEEL, not every pixel of HOW to execute it. Use @references to show, not tell.
 
-- User wants to generate a video with Seedance 2.0
-- User wants to swap a character into an existing video's choreography/motion
-- User wants to download TikTok videos as reference clips
-- User mentions "seedance", "video generation", "character swap", "dance video", "reference video"
+This library offers two workflows:
 
-## Phase 0: Creative Brainstorm & Asset Gathering
+1. **Full Interview**: For users with a vague idea who need creative guidance. Start with [skill:seedance-interview].
+2. **Direct Prompt**: For users who know what they want. Start with [skill:seedance-prompt].
 
-Before writing any prompt or touching the API, walk the user through a structured brainstorm. This phase prevents the #1 failure mode: generating videos with generic settings, wrong props, and no brand identity.
+> **Note (Feb 2026):** Seedance V2 currently performs best with short (<2000 char) Chinese prompts.
 
-**This phase is mandatory.** Do not skip it even if the user provides a prompt upfront — they likely have reference assets that will dramatically improve the output.
+> **Feb 2026 Status**: Seedance 2.0 API global release was delayed (from planned Feb 24) due to copyright enforcement actions by Disney, Paramount Skydance, Netflix, MPA, and SAG-AFTRA. ByteDance paused real-person face uploads Feb 15. Content filters for named franchise characters, anime IPs, and streaming originals have been tightened. The [skill:seedance-copyright] module reflects the current post-enforcement state. Run it before every generation.
 
-### Step 0a: Understand the Vision
 
-Ask the user ONE question at a time (don't overwhelm):
+## Platform Compatibility
 
-1. **What's the scene?** — What story, product, or concept are we visualizing?
-2. **What's the vibe?** — Anime, photorealistic, cinematic, commercial, abstract? Any reference films/shows/ads?
-3. **What's it for?** — Social media, pitch deck, brand launch, personal project? This informs aspect ratio, duration, and tone.
+| Platform | Install path | Scope |
+|---|---|---|
+| **Antigravity** | `.agent/skills/seedance-20/` | workspace |
+| **Gemini CLI** | `.gemini/skills/seedance-20/` | workspace |
+| **Firebase Studio** | `.idx/skills/seedance-20/` | workspace |
+| **Claude Code** | `.claude/skills/seedance-20/` | workspace |
+| **OpenClaw / ClawHub** | `.claude/skills/seedance-20/` | workspace |
+| **GitHub Copilot** | `.github/skills/seedance-20/` | workspace |
+| **Codex** | `.agents/skills/seedance-20/` | workspace |
+| **Cursor** | `.cursor/skills/seedance-20/` | workspace |
+| **Windsurf** | `.windsurf/skills/seedance-20/` | workspace |
+| **OpenCode** | `.opencode/skills/seedance-20/` | workspace |
 
-### Step 0b: Asset Inventory
-
-After understanding the vision, ask about reference assets. These are the difference between generic AI output and something that actually looks like THEIR brand/venue/product.
-
-Ask: **"Do you have any of these assets you can send me?"**
-
-| Asset Type | Why It Matters | How It's Used |
-|-----------|---------------|---------------|
-| **Venue/location images** | Without these, the model invents a generic space | `reference_images` — locks architecture, colors, layout |
-| **Brand guidelines / colors** | Energy effects, lighting, wardrobe all align to brand | Informs prompt color palette |
-| **Logo** | Can appear on jerseys, court, walls, or as energy reveal | `reference_images` with `[ImageN]` tag in prompt |
-| **Product images** (paddles, equipment, etc.) | Model defaults to wrong objects (e.g., tennis rackets for pickleball) | `reference_images` — teaches the model the correct prop shape |
-| **Character images** | For character swaps or consistent faces | `reference_images` or `image` (first frame) |
-| **Reference videos** | For motion/choreography transfer | `reference_videos` with `[VideoN]` tag |
-| **Mood board / style references** | Clarifies aesthetic beyond words | Informs prompt style section |
-
-Accept assets from:
-- **Local files** — user provides a path
-- **URLs** — direct links to images/videos
-- **Telegram** — poll the bot chat for incoming photos/documents (see Telegram integration below)
-- **Drag and drop** — user pastes or attaches in the conversation
-
-### Step 0c: Research the Prompt Corpus
-
-With the vision and assets in hand, grep the local prompt library for structural templates matching the user's style:
+### One-liner installs
 
 ```bash
-grep -i -A 30 "STYLE_KEYWORD" .claude/skills/seedance/awesome-seedance-2-prompts/README.md
+# Antigravity / Gemini CLI / Firebase Studio
+antigravity skills install https://github.com/Emily2040/seedance-2.0
+gemini skills install https://github.com/Emily2040/seedance-2.0
+# Claude Code / OpenClaw
+claude skills install https://github.com/Emily2040/seedance-2.0
+# Codex
+codex skills install https://github.com/Emily2040/seedance-2.0
+# Cursor
+cursor skills install https://github.com/Emily2040/seedance-2.0
+# Windsurf
+windsurf skills install https://github.com/Emily2040/seedance-2.0
+# OpenCode
+opencode skills install https://github.com/Emily2040/seedance-2.0
 ```
 
-Present 2-3 relevant corpus examples and explain what structural patterns to steal from each.
-
-### Step 0d: Propose Concept Directions
-
-Present **2-3 concept directions** with trade-offs, similar to a brainstorm skill:
-
-- Each concept should be 2-3 sentences describing the visual story
-- Call out which reference assets each concept would use
-- Recommend one direction and explain why
-- Note any content filter risks per concept
-
-Get user alignment on a direction BEFORE writing the full prompt.
-
-### Step 0e: Reference Image Strategy
-
-Based on the chosen direction and available assets, decide the reference image strategy:
-
-- **`image` (first frame)** — Use when you want to PRESERVE the visual style of the image (e.g., a photorealistic rendering that should stay photorealistic)
-- **`reference_images`** — Use when you want the model to pick up CONTENT (architecture, props, logos) but render in a DIFFERENT style (e.g., anime style in a real venue)
-- **Slot budget** — Up to 9 reference images, 1 first frame, 1 last frame. Plan which assets go where.
-
-### Telegram Integration
-
-If the user wants to send assets via Telegram, poll the NanoClaw bot chat:
-
-```bash
-# Check for new messages
-BOT_TOKEN="<from .env>"
-curl -s "https://api.telegram.org/bot$BOT_TOKEN/getUpdates?limit=10&offset=-10" | \
-  jq '.result[] | {message_id, has_photo: (.message.photo != null), has_doc: (.message.document != null)}'
-
-# Download highest-res photo
-FILE_ID=$(... | jq -r '.message.photo[-1].file_id')
-FILE_PATH=$(curl -s "https://api.telegram.org/bot$BOT_TOKEN/getFile?file_id=$FILE_ID" | jq -r '.result.file_path')
-curl -s "https://api.telegram.org/file/bot$BOT_TOKEN/$FILE_PATH" -o /tmp/seedance-work/ref.jpg
-```
-
-Also send finished videos back to Telegram for easy mobile review:
-```bash
-curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendVideo" \
-  -F "chat_id=<CHAT_ID>" -F "video=@/tmp/seedance-work/output.mp4" -F "caption=<description>"
-```
-
-**IMPORTANT:** ALWAYS extract frames and review them BEFORE sending to Telegram or declaring a version ready. Never send raw outputs without frame-by-frame QA first — the user trusts that what you send has been checked.
-
-## Required Environment
-
-### API Keys (check before proceeding)
-
-```bash
-echo "REPLICATE_API_TOKEN=${REPLICATE_API_TOKEN:+SET}${REPLICATE_API_TOKEN:-UNSET}"
-```
-
-If `REPLICATE_API_TOKEN` is not set, stop and ask the user to set it.
-
-### CLI Tools
-
-```bash
-which yt-dlp ffmpeg ffprobe jq curl
-```
-
-- `yt-dlp` — downloading reference videos from TikTok, YouTube, etc.
-- `ffmpeg` / `ffprobe` — audio extraction, stitching, frame extraction, duration checks
-- `jq` — JSON parsing for API responses
-- `curl` — API calls
-
-If any are missing, tell the user to install them.
-
-## Workflow
-
-### Phase 1: Gather Assets
-
-The user provides some combination of:
-
-1. **Reference video** — a URL (TikTok, YouTube, direct link) or local file path
-2. **Character image** — a local file path or URL
-3. **Prompt** — what the generated video should look like
-
-#### Downloading Reference Videos
-
-For TikTok/YouTube URLs, use yt-dlp:
-
-```bash
-yt-dlp --no-warnings -o "/tmp/seedance-work/reference.%(ext)s" "<URL>"
-```
-
-#### Analyzing Reference Videos
-
-Extract frames to understand the video content for prompt writing:
-
-```bash
-ffmpeg -y -i reference.mp4 -vf "fps=1" -q:v 2 frame_%02d.jpg
-```
-
-Then read the frames to describe the motion, style, and content for the prompt.
-
-### Phase 2: Upload Assets to Public URLs
-
-**Seedance requires publicly accessible URLs for reference inputs.** Any direct-download URL works — the key requirement is that the URL returns the file directly without auth headers.
-
-Upload local files to a temporary file host to get a public URL:
-
-```bash
-# Option 1: tmpfiles.org (preferred — returns direct download URL)
-RAW_URL=$(curl -s -F "file=@LOCAL_FILE" https://tmpfiles.org/api/v1/upload | jq -r '.data.url')
-# Convert to direct download URL
-PUBLIC_URL=$(echo "$RAW_URL" | sed 's|tmpfiles.org/|tmpfiles.org/dl/|')
-
-# Option 2: file.io (single-use download link)
-PUBLIC_URL=$(curl -s -F "file=@LOCAL_FILE" https://file.io | jq -r '.link')
-
-# Option 3: litterbox.catbox.moe (temp files, 1h-72h expiry)
-PUBLIC_URL=$(curl -s -F "reqtype=fileupload" -F "time=24h" -F "fileToUpload=@LOCAL_FILE" https://litterbox.catbox.moe/resources/internals/api.php)
-```
-
-Try each in order until one succeeds — availability of free file hosts varies. The URL just needs to be a direct download link accessible without authentication.
-
-**Note:** Replicate file API URLs (`https://api.replicate.com/v1/files/...`) do NOT work — they require auth headers that Seedance's backend doesn't send.
-
-### Phase 3: Generate Video
-
-#### Model Selection — Iterate Fast, Ship on Main
-
-Use a two-phase workflow:
-
-1. **Iteration phase** — use `seedance-2.0-fast` for rapid prompt iteration. Cheaper, faster (2-4 min), good enough to evaluate composition, motion, and storytelling. Iterate here until the prompt produces good results.
-2. **Final render** — once the prompt is locked, re-run on `seedance-2.0` (main) for maximum quality. Slower (~5-10 min) but higher fidelity output.
-
-**Note on reference videos:** The non-fast `seedance-2.0` model rejects reference video URLs with "reference_video must be provided as a web url" regardless of hosting. For reference-video workflows, use `seedance-2.0-fast` for both phases.
-
-```bash
-# Iteration phase (fast)
-VERSION=$(curl -s "https://api.replicate.com/v1/models/bytedance/seedance-2.0-fast" \
-  -H "Authorization: Bearer $REPLICATE_API_TOKEN" | jq -r '.latest_version.id')
-
-# Final render (main — text-to-video and image-to-video only)
-VERSION=$(curl -s "https://api.replicate.com/v1/models/bytedance/seedance-2.0" \
-  -H "Authorization: Bearer $REPLICATE_API_TOKEN" | jq -r '.latest_version.id')
-```
-
-#### API Schema
-
-```
-POST https://api.replicate.com/v1/predictions
-Authorization: Bearer $REPLICATE_API_TOKEN
-Content-Type: application/json
-
-{
-  "version": "<version_hash>",
-  "input": {
-    "prompt": "string (required)",
-    "image": "uri — first frame image (cannot combine with reference_images)",
-    "last_frame_image": "uri — last frame (requires image)",
-    "reference_images": ["uri", ...] — up to 9, for character/style consistency,
-    "reference_videos": ["uri", ...] — up to 3, total max 15s, for motion transfer,
-    "reference_audios": ["uri", ...] — up to 3, total max 15s, for lip-sync,
-    "duration": int (-1 for auto, or 1-15 seconds, default 5),
-    "resolution": "480p" | "720p" (default "720p"),
-    "aspect_ratio": "16:9" | "4:3" | "1:1" | "3:4" | "9:16" | "21:9" | "adaptive",
-    "generate_audio": bool (default true),
-    "seed": int | null
-  }
-}
-```
-
-Reference tags in prompts: `[Image1]`, `[Video1]`, `[Audio1]`, etc.
-
-#### Content Filter Avoidance
-
-ByteDance's moderation flags ~37% of prompts (E005 "flagged as sensitive"). The filter is a language model evaluating intent, not a keyword blocker.
-
-**Prompt length:** Prompts over 2000 chars are truncated. Keep under 1500 chars for safety.
-
-**Confirmed trigger words/concepts (tested April 2026):**
-- "robot" — consistently flagged even in innocent Pixar contexts. Use "character", "mascot", "creature" instead
-- Violence language: "smashing", "slams", "barrage", "shrapnel", "projectile", "detonation", "explosion", "strikes", "white-hot"
-- "command center", "control room" — may trigger military/surveillance flags
-- "lip-sync", "screaming", "attack"
-- Humanoid figures with glowing eyes in dark environments
-
-**Safe alternatives:**
-- Animals (cats, dogs) pass easily in identical scenarios where robots fail
-- "taps" instead of "slams", "sends" instead of "fires", "arrives" instead of "strikes"
-- Bright/warm environments pass more often than dark/moody ones
-- Front-load cinematic language (camera types, lens specs) — signals professionalism to the filter
-
-**Promoting to main model:** The main `seedance-2.0` model has stricter content filtering than fast. When shipping a prompt to main, always fire **two predictions in parallel**:
-1. **Full prompt** — exact copy of the prompt that passed on fast, same seed
-2. **Intent-only prompt** — strip to bare creative intent under 250 chars (no timestamps, no camera direction, just the scene concept + style + references). The main model produces higher quality and needs less hand-holding.
-
-If both pass, compare results — the full prompt gives more control, the intent-only prompt gives the model more creative freedom. If only one passes, use that. If both fail, apply the E005 retry policy below (synonym swaps + seed changes) to BOTH versions.
-
-**E005 Retry Policy — Exponential Backoff, Not Prompt Gutting:**
-The content filter is non-deterministic. The same prompt + references can fail then pass on retry. **NEVER** drop user-provided reference images or strip creative intent after a filter rejection. Instead:
-1. Retry with a different `seed` value (e.g., 42, 123, 7777)
-2. On each retry, also swap synonyms on low-value words that don't change creative intent — the filter is a language model, so small embedding shifts can flip the result:
-   - Camera verbs: "swoops" ↔ "glides" ↔ "sweeps" ↔ "rises"
-   - Tracking: "snaps forward" ↔ "pushes forward" ↔ "tracks forward"
-   - Effects: "aura" ↔ "glow" ↔ "rim light" ↔ "shimmer"
-   - Mood: "intense focus" ↔ "deep concentration" ↔ "steady gaze"
-   - Scale: "luminous" ↔ "glowing" ↔ "radiant" ↔ "brilliant"
-3. Fire 2-3 retries in parallel with different seed + synonym combos
-4. Retry up to 10 times before considering any structural prompt changes
-5. Never remove user-provided reference images — they were gathered intentionally during brainstorm
-
-**Filter bypass strategies (from Emily2040/seedance-2.0 filter guide):**
-1. Write like a filmmaker, not a casual user — production language gets more latitude
-2. Chinese prompts have different filter thresholds and may pass where English fails
-3. The filter evaluates the whole prompt as one scene — professional framing helps
-4. Retry with different seeds — the filter is sometimes non-deterministic
-5. For main model: use ultra-short prompts (under 250 chars), fire up to 3 attempts with different seeds
-
-#### Creating the Prediction
-
-```bash
-curl -s -X POST "https://api.replicate.com/v1/predictions" \
-  -H "Authorization: Bearer $REPLICATE_API_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d "$(jq -n \
-    --arg version "$VERSION" \
-    --arg prompt "$PROMPT" \
-    --arg video_url "$VIDEO_URL" \
-    --arg char_url "$CHAR_URL" \
-    '{
-      version: $version,
-      input: {
-        prompt: $prompt,
-        reference_images: [$char_url],
-        reference_videos: [$video_url],
-        duration: -1,
-        resolution: "720p",
-        aspect_ratio: "9:16",
-        generate_audio: false
-      }
-    }')"
-```
-
-#### Polling
-
-Seedance fast typically takes 2-4 minutes. Poll every 60-90 seconds:
-
-```bash
-curl -s "https://api.replicate.com/v1/predictions/$PRED_ID" \
-  -H "Authorization: Bearer $REPLICATE_API_TOKEN" | jq '{status, error, output}'
-```
-
-Statuses: `starting` → `processing` → `succeeded` | `failed`
-
-On success, `output` contains a direct download URL for the generated MP4.
-
-### Phase 4: Post-Processing
-
-#### Audio Stitching
-
-The generated video often has no audio (especially if `generate_audio: false`). Stitch audio from the original reference video:
-
-```bash
-# Get durations
-GEN_DURATION=$(ffprobe -v error -show_entries format=duration -of csv=p=0 generated.mp4)
-REF_DURATION=$(ffprobe -v error -show_entries format=duration -of csv=p=0 reference.mp4)
-
-# Mux: take video from generated, audio from reference, trim to shorter duration
-ffmpeg -y \
-  -i generated.mp4 \
-  -i reference.mp4 \
-  -map 0:v -map 1:a \
-  -c:v copy -c:a aac -b:a 192k \
-  -t "$GEN_DURATION" \
-  output.mp4
-```
-
-#### Audio Extraction Only
-
-If the user just wants the audio track:
-
-```bash
-ffmpeg -y -i input.mp4 -vn -q:a 2 output.mp3
-```
-
-### Phase 5: Cleanup
-
-Remove local temporary files:
-
-```bash
-rm -rf /tmp/seedance-work/
-```
-
-Uploaded temp files on hosts like tmpfiles.org expire automatically (typically 1-24 hours).
-
-## Iteration Workflow
-
-The core loop is: **research → draft → generate on fast → extract frames → critique → revise → repeat until good → final render on main.**
-
-### Step 1: Research the Prompt Corpus
-
-Before writing any prompt, grep the local prompt library for structural templates matching the user's requested style:
-
-```bash
-grep -i -A 30 "STYLE_KEYWORD" .claude/skills/seedance/awesome-seedance-2-prompts/README.md
-```
-
-Use matching prompts as structural templates. Never invent prompt structure from scratch — adapt proven formats.
-
-### Step 2: Draft and Storyboard QA
-
-Write the prompt, then spawn a **blind storyboard QA subagent** BEFORE generating. The subagent must NOT know what product or brand this is for — it reviews purely as a film storyboard.
-
-Pass the subagent ONLY the raw prompt text. It should critique:
-
-- **Narrative coherence** — does the story make logical sense moment to moment? Would a viewer follow it?
-- **Directional consistency** — if things move outward, do they keep moving outward? Any contradictions in spatial flow?
-- **Time budget** — is each beat given enough seconds to register, or is it cramped? Is any beat given too long?
-- **Transition logic** — are jumps between shots/scales smooth or jarring? Are there impossible camera moves?
-- **Filter risk** — flag any words/concepts likely to trigger content moderation (violence, "robot", military, etc.)
-- **Char count** — will this fit under 1500 chars after cleanup? If over, what to cut?
-- **Ambiguity** — anything a video model could misinterpret? Vague descriptions that could go wrong?
-- **The ending** — does the storyboard resolve, or does it just stop?
-
-The subagent should give a verdict: **GENERATE** or **REVISE**, with specific line-level fixes if revise. Under 300 words.
-
-After the storyboard QA passes, verify the prompt is under 1500 chars and fire on `seedance-2.0-fast`. Show the user the full prompt before firing.
-
-### Step 3: Generate on Fast
-
-Fire on `seedance-2.0-fast`. Poll every 60-90 seconds.
-
-### Step 4: Extract Frames and Post-Render Critique
-
-### Step 4 (cont.): Extract Frames and Post-Render Critique
-
-Once the video succeeds, extract frames at 1fps and review every frame:
-
-```bash
-ffmpeg -y -i video.mp4 -vf "fps=1" -q:v 2 /tmp/seedance-work/frame_%02d.jpg
-```
-
-Read all frames. Spawn a **blind cinematography critique subagent**. The subagent must NOT know:
-- What the video is for (no product/brand context)
-- What the intended story beats were (no prompt shown)
-- That it's AI-generated
-
-The subagent reviews purely as a piece of animation filmmaking. It should read ALL extracted frames (1fps, every frame) and critique:
-
-- **Composition** — framing, focal point clarity, visual balance per frame
-- **Camera execution** — movement, angle choices, transitions between shots
-- **Lighting & color** — palette, contrast, mood consistency
-- **Story clarity** — can you understand what's happening with zero context? Describe the story you see
-- **Logical consistency** — do elements behave consistently? If something moves left, does it keep going left? Do characters/objects follow coherent spatial logic throughout?
-- **Pacing** — does the energy build? Any dead or wasted frames? Any repeated shots?
-- **Production value** — Pixar theatrical or cheap mobile game ad?
-- **Character design & consistency** — do characters hold together across frames? Proportions stable?
-- **The ending** — does the final moment land? Is there a payoff or does it just stop?
-
-The subagent should give letter grades (A-F) per category, identify the 3 weakest and 3 strongest frames by number, and give specific actionable changes a director would make. End with a one-word verdict: SHIP or ITERATE. Critique should be at the level of judging an Oscar-nominated animated short — ruthless and precise. Under 500 words.
-
-### Step 5: Revise and Iterate
-
-Based on the critique, revise the prompt. Common fixes:
-- **Dead frames** → compress that time segment, give it action
-- **Lost detail at wide shots** → don't pull back as far, specify "three-quarter overhead" not "full overhead"
-- **Flat lighting** → specify color contrast (e.g., "cool blue vs warm gold")
-- **No story payoff** → add a resolution beat (conflict → escalation → victory)
-- **Monochrome mood** → add a contrasting color moment
-
-Repeat Steps 3-5 until the critique passes. Re-run storyboard QA (Step 2) if the prompt changes substantially.
-
-### Step 6: Final Render on Main
-
-Once the prompt is locked on fast, re-run on `seedance-2.0` (main) for maximum quality:
-
-```bash
-VERSION=$(curl -s "https://api.replicate.com/v1/models/bytedance/seedance-2.0" \
-  -H "Authorization: Bearer $REPLICATE_API_TOKEN" | jq -r '.latest_version.id')
-```
-
-Same prompt, same parameters. Main model is slower (~5-10 min) but higher fidelity. Only use main for text-to-video and image-to-video — reference-video workflows must stay on fast.
-
-## Prompt Engineering
-
-### Prompt Library (local reference)
-
-A full library of 1800+ curated community prompts should be cloned locally. If not present, clone it on first use:
-
-```bash
-git clone https://github.com/YouMind-OpenLab/awesome-seedance-2-prompts.git \
-  .claude/skills/seedance/awesome-seedance-2-prompts
-```
-
-Then grep it for relevant examples matching the user's requested style/genre:
-
-```bash
-# Search for prompts by style (e.g., anime, cinematic, pixar, commercial, cyberpunk)
-grep -i -A 30 "anime\|action\|combat" .claude/skills/seedance/awesome-seedance-2-prompts/README.md
-
-# Search for structural patterns
-grep -i -A 30 "\[00:00" .claude/skills/seedance/awesome-seedance-2-prompts/README.md
-```
-
-Use matching prompts as structural templates. Adapt the format and level of detail to the user's request — don't invent prompt structure from scratch.
-
-### Prompt Structure (derived from top community prompts)
-
-The best Seedance prompts follow this structure:
-
-1. **Header line** — genre/style declaration + duration + quality tier
-2. **Bracketed metadata sections:**
-   - `【Core Focus】` or `【Style】` — the central concept and visual identity
-   - `【Style】` — rendering quality, camera type, resolution, aesthetic references
-   - `【Duration】` — total length
-   - `【Scene】` — environment and atmosphere setup
-3. **Timestamped shot breakdowns:**
-   - `[00:00-00:05] Shot 1: Title · Subtitle (Emotional beat)`
-   - `Visuals:` — what the camera sees
-   - `Action:` — what happens / movement
-   - `Special Effects Details:` — particles, lighting, VFX specifics
-4. **Technical quality anchors** — scattered throughout: "8K sharp", "shallow depth of field", "cinematic", "no deformation or drift"
-5. **Character consistency callouts** — "characters maintain consistent faces, clothing, and hairstyles throughout without deformation, drift, or artifacts"
-6. **Negative constraints** — "no text, watermarks, or subtitles", "no gore"
-
-### Key Tips
-
-- **Character consistency**: Always include "maintain consistent faces, clothing, and hairstyles throughout without deformation, drift, or artifacts"
-- **Motion quality**: Specify "natural subtle movements" to avoid robotic feel
-- **Lip sync**: Use "lip synchronization is natural and precise" for dialogue scenes
-- **Clean output**: Include "no text, watermarks, or subtitles" unless text is intentional
-- **Depth of field**: "shallow depth of field, creamy blurred background" for cinematic look
-- **Continuity**: "continuous motion, no cuts" for seamless sequences
-- **Camera**: Specify camera type — "handheld", "tracking", "orbital", "FPV", "slow push-in"
-- **Emotional beats**: Use parenthetical notes like `(Sense of charging)` or `(Ultimate clash)` to guide pacing
-
-### For Character Swaps (reference image + reference video)
-
-```
-The [character description] from [Image1] moves in the same style as [Video1].
-[Background description]. [Motion description]. [Style description].
-```
-
-Keep it simple. Over-describing triggers content filters.
-
-### For Image-to-Video (first frame)
-
-Use the `image` parameter instead of `reference_images`. The image becomes the first frame and the model animates from there.
-
-### Content Filter Workarounds
-
-If prompts get flagged (error E005), the prompt library has sanitized versions of intense scenes. Grep for the genre and look at how they phrase action/combat without triggering filters.
-
-## Working Directory
-
-All temporary files go to `/tmp/seedance-work/`. Create it at the start:
-
-```bash
-mkdir -p /tmp/seedance-work
-```
+## Skills
+
+**Core pipeline**
+[skill:seedance-interview] / [skill:seedance-interview-short] · [skill:seedance-prompt] / [skill:seedance-prompt-short] · [skill:seedance-camera] · [skill:seedance-motion] · [skill:seedance-lighting] · [skill:seedance-characters] · [skill:seedance-style] · [skill:seedance-vfx] · [skill:seedance-audio] · [skill:seedance-pipeline] · [skill:seedance-recipes] · [skill:seedance-troubleshoot]
+
+**Content quality**
+[skill:seedance-copyright] · [skill:seedance-antislop] · [skill:seedance-filter]
+
+**Vocabulary**
+[skill:seedance-vocab-zh] · [skill:seedance-vocab-ja] · [skill:seedance-vocab-ko] · [skill:seedance-vocab-es] · [skill:seedance-vocab-ru]
+
+**Working Examples**
+[skill:seedance-examples-zh]
+
+## References
+
+[ref:platform-constraints] · [ref:json-schema] · [ref:prompt-examples] · [ref:quick-ref] · [ref:storytelling-framework] · [ref:genre-guides] · [ref:reference-workflow] · [ref:i2v-guide] · [ref:intent-vs-precision] · [ref:replicate-api]
+
+## Version history
+
+| Version | Date | Changes |
+|---|---|---|
+| 5.0.0 | 2026-03-03 | **Intent-First Overhaul.** Rewrote seedance-prompt (genre router, 30-100 word target, I2V gate). Restructured seedance-motion (intent-first, @Video reference primary). Updated seedance-camera (One-Move Rule, genre presets). Updated seedance-recipes (7 genre categories). Updated seedance-interview (Quick Mode exit, genre detection). Updated seedance-troubleshoot (diagnostic tree). Added 4 new references: genre-guides, reference-workflow, i2v-guide, intent-vs-precision. Minor updates to seedance-prompt-short, seedance-style, seedance-vfx, seedance-audio. |
+| 4.2.0 | 2026-03-03 | Safe Vocabulary Integration: added filter-safe action, weapon, clothing, body, environment, material, VFX, sound, and production-context terms to seedance-filter and all 5 language vocabulary skills (zh, ja, ko, es, ru). Term counts: zh 550+, ja/ko/es/ru 450+ each. |
+| 4.1.0 | 2026-03-02 | Added seedance-filter: content filter intelligence, 37% block-rate diagnosis, four-question framework, safe-prompting techniques. |
+| 4.0.0 | 2026-02-28 | Cognitive Architecture upgrade: L8 Construction-First interview, L7 Concealment Check prompt, L11 Conservation Law troubleshoot. Inspired by agi-in-md cognitive compression. |
+| 3.8.0 | 2026-02-27 | Dual Workflow System: Max Detail + Max Performance. Added seedance-prompt-short and seedance-interview-short. |
+| 3.7.0 | 2026-02-26 | Redesigned seedance-interview as "Director's Journey" with 5-stage storytelling workflow. Added storytelling-framework reference. |
+| 3.6.1 | 2026-02-26 | Enhanced vocab-zh (400+ terms, 16 categories). Added seedance-examples-zh with 16 battle-tested Chinese prompts across 7 genres. |
+| 3.3.0 | 2026-02-25 | Rewrote seedance-interview v4.0: A/B/C/D/E guided stages, 5-flow types (image/video/audio/one-liner/script), 3-option prompt output, language selection |
+| 3.2.1 | 2026-02-25 | **Accuracy corrections**: removed negative-prompt support claim (not supported), corrected API availability (no public API yet), fixed aspect ratios (added 3:4 and 21:9), fixed video input limit (15s combined not per-file), removed mobile-only duration claim |
+| 3.1.0 | 2026-02-25 | Added copyright, antislop, vocab-ja/ko/es/ru modules. 24 files. |
+| 3.0.0 | 2026-02-25 | Initial 12-skill core pipeline. |
