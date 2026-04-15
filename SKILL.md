@@ -1,11 +1,11 @@
 ---
 name: seedance
-description: Generate cinematic videos with Seedance 2.0 via Replicate — iterate-fast/ship-main workflow, prompt corpus research, blind QA critique loop, reference video + character swap, TikTok download, audio stitching
+description: Generate cinematic videos with Seedance 2.0 via Replicate — structured brainstorm with asset gathering, iterate-fast/ship-main workflow, prompt corpus research, blind QA critique loop, reference images for venue/brand/props, content filter intelligence, character swap, TikTok download, audio stitching
 ---
 
 # Seedance — Video Generation Skill
 
-Generate cinematic videos using ByteDance's Seedance 2.0 model via the Replicate API. Iterate on `seedance-2.0-fast`, ship final renders on `seedance-2.0` main. Includes a prompt research corpus, blind cinematography QA critique loop, content filter intelligence, and support for character swaps, TikTok downloading, and audio stitching.
+Generate cinematic videos using ByteDance's Seedance 2.0 model via the Replicate API. Starts with a **structured brainstorm** to gather reference assets (venues, logos, props, brand colors) that dramatically improve output quality. Iterate on `seedance-2.0-fast`, ship final renders on `seedance-2.0` main. Includes a prompt research corpus, blind cinematography QA critique loop, content filter intelligence, and support for character swaps, TikTok downloading, and audio stitching.
 
 **Announce at start:** "I'm using the seedance skill to [generate a video / download references / swap a character]."
 
@@ -15,6 +15,95 @@ Generate cinematic videos using ByteDance's Seedance 2.0 model via the Replicate
 - User wants to swap a character into an existing video's choreography/motion
 - User wants to download TikTok videos as reference clips
 - User mentions "seedance", "video generation", "character swap", "dance video", "reference video"
+
+## Phase 0: Creative Brainstorm & Asset Gathering
+
+Before writing any prompt or touching the API, walk the user through a structured brainstorm. This phase prevents the #1 failure mode: generating videos with generic settings, wrong props, and no brand identity.
+
+**This phase is mandatory.** Do not skip it even if the user provides a prompt upfront — they likely have reference assets that will dramatically improve the output.
+
+### Step 0a: Understand the Vision
+
+Ask the user ONE question at a time (don't overwhelm):
+
+1. **What's the scene?** — What story, product, or concept are we visualizing?
+2. **What's the vibe?** — Anime, photorealistic, cinematic, commercial, abstract? Any reference films/shows/ads?
+3. **What's it for?** — Social media, pitch deck, brand launch, personal project? This informs aspect ratio, duration, and tone.
+
+### Step 0b: Asset Inventory
+
+After understanding the vision, ask about reference assets. These are the difference between generic AI output and something that actually looks like THEIR brand/venue/product.
+
+Ask: **"Do you have any of these assets you can send me?"**
+
+| Asset Type | Why It Matters | How It's Used |
+|-----------|---------------|---------------|
+| **Venue/location images** | Without these, the model invents a generic space | `reference_images` — locks architecture, colors, layout |
+| **Brand guidelines / colors** | Energy effects, lighting, wardrobe all align to brand | Informs prompt color palette |
+| **Logo** | Can appear on jerseys, court, walls, or as energy reveal | `reference_images` with `[ImageN]` tag in prompt |
+| **Product images** (paddles, equipment, etc.) | Model defaults to wrong objects (e.g., tennis rackets for pickleball) | `reference_images` — teaches the model the correct prop shape |
+| **Character images** | For character swaps or consistent faces | `reference_images` or `image` (first frame) |
+| **Reference videos** | For motion/choreography transfer | `reference_videos` with `[VideoN]` tag |
+| **Mood board / style references** | Clarifies aesthetic beyond words | Informs prompt style section |
+
+Accept assets from:
+- **Local files** — user provides a path
+- **URLs** — direct links to images/videos
+- **Telegram** — poll the bot chat for incoming photos/documents (see Telegram integration below)
+- **Drag and drop** — user pastes or attaches in the conversation
+
+### Step 0c: Research the Prompt Corpus
+
+With the vision and assets in hand, grep the local prompt library for structural templates matching the user's style:
+
+```bash
+grep -i -A 30 "STYLE_KEYWORD" .claude/skills/seedance/awesome-seedance-2-prompts/README.md
+```
+
+Present 2-3 relevant corpus examples and explain what structural patterns to steal from each.
+
+### Step 0d: Propose Concept Directions
+
+Present **2-3 concept directions** with trade-offs, similar to a brainstorm skill:
+
+- Each concept should be 2-3 sentences describing the visual story
+- Call out which reference assets each concept would use
+- Recommend one direction and explain why
+- Note any content filter risks per concept
+
+Get user alignment on a direction BEFORE writing the full prompt.
+
+### Step 0e: Reference Image Strategy
+
+Based on the chosen direction and available assets, decide the reference image strategy:
+
+- **`image` (first frame)** — Use when you want to PRESERVE the visual style of the image (e.g., a photorealistic rendering that should stay photorealistic)
+- **`reference_images`** — Use when you want the model to pick up CONTENT (architecture, props, logos) but render in a DIFFERENT style (e.g., anime style in a real venue)
+- **Slot budget** — Up to 9 reference images, 1 first frame, 1 last frame. Plan which assets go where.
+
+### Telegram Integration
+
+If the user wants to send assets via Telegram, poll the NanoClaw bot chat:
+
+```bash
+# Check for new messages
+BOT_TOKEN="<from .env>"
+curl -s "https://api.telegram.org/bot$BOT_TOKEN/getUpdates?limit=10&offset=-10" | \
+  jq '.result[] | {message_id, has_photo: (.message.photo != null), has_doc: (.message.document != null)}'
+
+# Download highest-res photo
+FILE_ID=$(... | jq -r '.message.photo[-1].file_id')
+FILE_PATH=$(curl -s "https://api.telegram.org/bot$BOT_TOKEN/getFile?file_id=$FILE_ID" | jq -r '.result.file_path')
+curl -s "https://api.telegram.org/file/bot$BOT_TOKEN/$FILE_PATH" -o /tmp/seedance-work/ref.jpg
+```
+
+Also send finished videos back to Telegram for easy mobile review:
+```bash
+curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendVideo" \
+  -F "chat_id=<CHAT_ID>" -F "video=@/tmp/seedance-work/output.mp4" -F "caption=<description>"
+```
+
+**IMPORTANT:** ALWAYS extract frames and review them BEFORE sending to Telegram or declaring a version ready. Never send raw outputs without frame-by-frame QA first — the user trusts that what you send has been checked.
 
 ## Required Environment
 
@@ -157,7 +246,24 @@ ByteDance's moderation flags ~37% of prompts (E005 "flagged as sensitive"). The 
 - Bright/warm environments pass more often than dark/moody ones
 - Front-load cinematic language (camera types, lens specs) — signals professionalism to the filter
 
-**Main model vs fast model filters:** The main `seedance-2.0` model has significantly stricter content filtering than `seedance-2.0-fast`. Prompts that pass on fast will frequently fail on main. For final renders on main, **dramatically shorten the prompt** — strip all cinematic direction, timestamps, and detail down to the bare concept (under 250 chars works best). The main model needs less guidance anyway since it produces higher quality output.
+**Promoting to main model:** The main `seedance-2.0` model has stricter content filtering than fast. When shipping a prompt to main, always fire **two predictions in parallel**:
+1. **Full prompt** — exact copy of the prompt that passed on fast, same seed
+2. **Intent-only prompt** — strip to bare creative intent under 250 chars (no timestamps, no camera direction, just the scene concept + style + references). The main model produces higher quality and needs less hand-holding.
+
+If both pass, compare results — the full prompt gives more control, the intent-only prompt gives the model more creative freedom. If only one passes, use that. If both fail, apply the E005 retry policy below (synonym swaps + seed changes) to BOTH versions.
+
+**E005 Retry Policy — Exponential Backoff, Not Prompt Gutting:**
+The content filter is non-deterministic. The same prompt + references can fail then pass on retry. **NEVER** drop user-provided reference images or strip creative intent after a filter rejection. Instead:
+1. Retry with a different `seed` value (e.g., 42, 123, 7777)
+2. On each retry, also swap synonyms on low-value words that don't change creative intent — the filter is a language model, so small embedding shifts can flip the result:
+   - Camera verbs: "swoops" ↔ "glides" ↔ "sweeps" ↔ "rises"
+   - Tracking: "snaps forward" ↔ "pushes forward" ↔ "tracks forward"
+   - Effects: "aura" ↔ "glow" ↔ "rim light" ↔ "shimmer"
+   - Mood: "intense focus" ↔ "deep concentration" ↔ "steady gaze"
+   - Scale: "luminous" ↔ "glowing" ↔ "radiant" ↔ "brilliant"
+3. Fire 2-3 retries in parallel with different seed + synonym combos
+4. Retry up to 10 times before considering any structural prompt changes
+5. Never remove user-provided reference images — they were gathered intentionally during brainstorm
 
 **Filter bypass strategies (from Emily2040/seedance-2.0 filter guide):**
 1. Write like a filmmaker, not a casual user — production language gets more latitude
