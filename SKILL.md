@@ -62,7 +62,7 @@ opencode skills install https://github.com/Emily2040/seedance-2.0
 ## Skills
 
 **Core pipeline**
-[skill:seedance-interview] / [skill:seedance-interview-short] · [skill:seedance-prompt] / [skill:seedance-prompt-short] · [skill:seedance-camera] · [skill:seedance-motion] · [skill:seedance-lighting] · [skill:seedance-characters] · [skill:seedance-style] · [skill:seedance-vfx] · [skill:seedance-audio] · [skill:seedance-pipeline] · [skill:seedance-recipes] · [skill:seedance-troubleshoot]
+[skill:seedance-interview] / [skill:seedance-interview-short] · [skill:seedance-prompt] / [skill:seedance-prompt-short] · [skill:seedance-camera] · [skill:seedance-motion] · [skill:seedance-lighting] · [skill:seedance-characters] · [skill:seedance-style] · [skill:seedance-vfx] · [skill:seedance-audio] · [skill:seedance-pipeline] · [skill:seedance-recipes] · [skill:seedance-troubleshoot] · [skill:seedance-continuity]
 
 **Content quality**
 [skill:seedance-copyright] · [skill:seedance-antislop] · [skill:seedance-filter]
@@ -81,6 +81,7 @@ opencode skills install https://github.com/Emily2040/seedance-2.0
 
 | Version | Date | Changes |
 |---|---|---|
+| 5.1.0 | 2026-04-16 | Added seedance-continuity: shot-chain protocol for multi-clip visual consistency. Reference bank management, slot allocation by shot type, human-in-the-loop Telegram verification, platform-specific notes (Replicate/Dreamina/Volcengine). |
 | 5.0.0 | 2026-03-03 | **Intent-First Overhaul.** Rewrote seedance-prompt (genre router, 30-100 word target, I2V gate). Restructured seedance-motion (intent-first, @Video reference primary). Updated seedance-camera (One-Move Rule, genre presets). Updated seedance-recipes (7 genre categories). Updated seedance-interview (Quick Mode exit, genre detection). Updated seedance-troubleshoot (diagnostic tree). Added 4 new references: genre-guides, reference-workflow, i2v-guide, intent-vs-precision. Minor updates to seedance-prompt-short, seedance-style, seedance-vfx, seedance-audio. |
 | 4.2.0 | 2026-03-03 | Safe Vocabulary Integration: added filter-safe action, weapon, clothing, body, environment, material, VFX, sound, and production-context terms to seedance-filter and all 5 language vocabulary skills (zh, ja, ko, es, ru). Term counts: zh 550+, ja/ko/es/ru 450+ each. |
 | 4.1.0 | 2026-03-02 | Added seedance-filter: content filter intelligence, 37% block-rate diagnosis, four-question framework, safe-prompting techniques. |
