@@ -165,13 +165,3 @@ All temporary files go to `/tmp/seedance-work/`:
 ```bash
 mkdir -p /tmp/seedance-work
 ```
-
-## Telegram Integration
-
-Send finished videos back via NanoClaw bot for mobile review:
-
-```bash
-BOT_TOKEN="<from .env>"
-curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendVideo" \
-  -F "chat_id=<CHAT_ID>" -F "video=@/tmp/seedance-work/output.mp4" -F "caption=<description>"
-```
