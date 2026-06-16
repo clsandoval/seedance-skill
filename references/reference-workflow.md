@@ -1,75 +1,57 @@
-# The @reference System: The Director's Most Powerful Tool (v5.0)
+# Reference Workflow
 
-This reference explains the `@reference` system, which is the most reliable and powerful way to control Seedance 2.0. The core philosophy is simple: **Show, don't just tell.**
+## Asset Role Map
 
----
+Before writing prompt prose, assign every uploaded asset a role. Role mapping prevents accidental transfer of identity, logos, scene ownership, or incompatible camera and motion instructions.
 
-## Why Use References?
+| Asset | Good Roles | Avoid |
+|---|---|---|
+| Image | identity, product, pose, costume, environment, first frame, last frame | asking it to define unseen motion |
+| Video | motion, camera, pacing, blocking, timing, gesture rhythm | copying protected identity, logo, or scene ownership |
+| Audio | rhythm, tempo, mood, ambience, delivery tone, music texture | assuming voice, song, or likeness authorization |
+| Text brief | action, genre, camera plan, constraints | replacing concrete reference roles with vague mood words |
 
-Text prompts are inherently ambiguous. A reference image or video provides the model with thousands of times more data than a text description. It is the ground truth for your creative vision.
+## Rules
 
-> **Rule of Thumb:** If you can show it, do. Use text to describe what the reference *can't* show, like motion, emotion, and intent.
+- Preserve reference tags exactly.
+- Give every reference one primary role before writing style language.
+- Do not ask one reference to control incompatible roles unless the tradeoff is explicit.
+- Use owned, licensed, public-domain, or clearly authorized references.
+- Write what should transfer and what should not transfer.
+- When authorization is unclear, transfer broad motion, tempo, mood, or production function rather than protected identity.
+- Treat multimodal reference generation, video edit, video extend, and first/last-frame generation as separate tasks. They can share assets, but the prompt should name the active workflow.
+- If audio and video references compete, make the video silent when audio timing must dominate, or state that the video controls camera/motion only and `[Audio1]` controls tempo.
 
----
+## Workflow-Specific Patterns
 
-## The Four Types of References
+| Workflow | Use this wording | Avoid |
+|---|---|---|
+| Multimodal reference | `[Image1] controls product identity; [Video1] controls camera rhythm; [Audio1] controls tempo only.` | `Use all references for style.` |
+| Video edit | `[Video1] is the source clip; preserve composition and timing, change only [lighting/background/VFX].` | Regenerating the whole concept from scratch. |
+| Video extend | `[Video1] is the previous clip; continue the same shot for [duration] and preserve last-frame continuity.` | Starting a new scene with no continuity anchor. |
+| First/last frame | `[Image1] is first frame; [Image2] is final visual target; generate the continuous transition only.` | Asking the last frame to be only "mood." |
+| Audio reference | `[Audio1] controls tempo and energy; do not copy protected voice, song, or performance identity.` | Treating audio as authorization proof. |
 
-Seedance 2.0 accepts four types of `@` tags. You can use multiple references in a single prompt.
+## Role Examples
 
-| Reference Type | Tag Syntax | What It Controls | Best For |
-| :--- | :--- | :--- | :--- |
-| **Image** | `@Image1` | Character identity, clothing, scene composition, lighting, color grade. | Character consistency, style transfer, setting a scene. |
-| **Video** | `@Video1` | Motion, action choreography, camera movement, editing rhythm, style. | Action scenes, dance sequences, complex camera work. |
-| **Audio** | `@Audio1` | Lip-sync, music timing, beat synchronization, ambient sound. | Dialogue scenes, music videos, sound-driven effects. |
-| **Material** | `@materialName` | (In-platform feature) Re-using a previously generated character or style. | Maintaining consistency across a long series of clips. |
+| Situation | Strong map |
+|---|---|
+| Product ad | `[Image1] controls product identity; [Audio1] controls tempo only.` |
+| Motion transfer | `[Video1] controls side-step choreography only; do not transfer performer, costume, room, or logo.` |
+| Style reference | `[Image2] controls warm bar atmosphere only; product identity remains from [Image1].` |
+| First-last frame | `[Image1] is first frame; [Image2] is target end frame; transition occurs through light sweep, not product deformation.` |
+| Edit/extend | `[Video1] is the source clip; preserve subject and camera path, replace only the failed lighting beat from 3s to 5s.` |
 
----
+## Motion Transfer
 
-## The Reference-First Workflow
+Field-observed technique; test before promising results. Probably the most under-used reference capability: a donor video drives choreography or camera rhythm while an image keeps identity.
 
-This is the recommended workflow for any prompt beyond a simple T2V generation.
+- Pair one donor `[Video1]` with one identity anchor `[Image1]`, and write the exclusion explicitly: `[Video1] controls the choreography only - nothing of its appearance, performer, costume, room, or logo transfers.`
+- Pick donor clips with one clear action, a clean silhouette, and a steady camera. Busy multi-person footage transfers noise, not motion.
+- Mute the donor clip before upload unless its sound should drive timing; if it keeps sound, state which reference owns the clock.
+- Transfers well: choreography, gesture timing, camera rhythm, blocking. Transfers poorly: fine hand detail, multi-person sync, facial performance.
+- Use only owned, licensed, stock, mocap, rehearsal, or self-recorded donor footage; real-person donors transfer general motion only, never likeness.
 
-### 1. Gather Your Assets
+## Template
 
-Before you write a single word, gather your reference files:
-
-- **Character:** A clear image of your character's face and clothing.
-- **Style:** An image or video clip that has the color grading, lighting, and mood you want.
-- **Motion:** A video clip that shows the *type* of action or camera movement you need.
-- **Audio:** The audio track for dialogue or music.
-
-### 2. Upload and Tag
-
-Upload your assets to the platform. The `@Image1`, `@Video1`, etc., tags are assigned automatically.
-
-### 3. Write a Minimal Prompt
-
-Your text prompt now serves as instructions for how to *use* the references.
-
-**Example: Action Scene**
-
-```
-// BAD: Text-only, overspecified
-A man in a black leather jacket throws a fast right hook, then a spinning back kick. The camera is handheld and shaky. The scene is a dark alley at night with neon lights...
-
-// GOOD: Reference-first, intent-driven
-@Image1 [character image], @Video1 [action movie clip reference].
-Transfer the fighting style and camera work from @Video1 to the character in @Image1. The scene is a dark alley at night.
-```
-
-### 4. Iterate
-
-Generate a 5-second test clip. If the model has misinterpreted the reference, add a short clarifying sentence to the prompt (e.g., `Focus on the character's fluid kicks, not the punches.`) and re-roll.
-
----
-
-## Advanced Techniques
-
-- **Style Transfer:** `Apply the color grade and moody lighting from @Image1 to the scene.`
-- **Motion Transfer:** `Transfer the dance choreography from @Video1 to the character in @Image2.`
-- **Camera Transfer:** `Match the slow, orbital camera movement from @Video1.`
-- **Bridging:** `Generate a 5-second transition that bridges the end of @Video1 and the start of @Video2.`
-
----
-
-*Maintained by [Emily (@iamemily2050)](https://github.com/Emily2040)*
+`[Image1] controls product identity. [Video1] controls camera pace only. [Audio1] controls tempo only. Preserve the subject from [Image1]; do not copy characters, logos, music, voice, or environment from [Video1]/[Audio1].`

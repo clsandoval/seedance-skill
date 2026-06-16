@@ -1,96 +1,84 @@
-# json-schema · Seedance 2.0 Prompt Schema v3
+# Seedance Prompt JSON Schema
 
-JSON is for **storage only**. Always compile to plain text before sending to the platform.
-
-## Schema v3
+Use this schema when the user wants structured output or when an automation pipeline needs stable fields.
 
 ```json
 {
-  "meta": {
-    "mode": "i2v",
-    "level": 3,
-    "dur": 10,
-    "ar": "16:9",
-    "res": "1080p",
-    "seed": 42
+  "mode": "t2v | i2v | v2v | r2v | flf2v | edit | extend | audio-led",
+  "duration": "string",
+  "aspect_ratio": "string",
+  "references": [
+    {"tag": "Image1", "role": "identity | product | pose | environment | style | first_frame | last_frame | reference_image"},
+    {"tag": "Video1", "role": "motion | camera | pacing | blocking | source_clip | reference_video"},
+    {"tag": "Audio1", "role": "voice | rhythm | ambience | music | tempo | reference_audio"}
+  ],
+  "characters": [],
+  "production": {
+    "phase": "brief | preproduction | generation | review | post | localization | delivery",
+    "role": "director | dp | producer | editor | colorist | sound | localization | qc",
+    "delivery_surface": "web | broadcast | social | theatrical | client_review | archive",
+    "approval_owner": ""
   },
-  "ref": {
-    "char": "@Image1",
-    "bg": "@Image2",
-    "cam": "@Video1",
-    "bgm": "@Audio1"
+  "shot_list": [
+    {
+      "shot_id": "S01_SH01",
+      "purpose": "establish | reveal | demonstrate | emotional_turn | end_card",
+      "shot_contract": "shot size, angle, lens feel, camera move, endpoint",
+      "start_frame": "",
+      "end_frame": "",
+      "risks": []
+    }
+  ],
+  "continuity_anchors": {
+    "character": [],
+    "product": [],
+    "wardrobe": [],
+    "props": [],
+    "location": "",
+    "screen_direction": "",
+    "eyeline": "",
+    "lighting_state": "",
+    "audio_state": ""
   },
-  "shot": {
-    "subj": "young woman in red coat",
-    "act": "turns, looks up, smiles",
-    "cam": "slow push-in, MCU",
-    "light": "golden backlight, soft fill",
-    "style": "cinematic",
-    "snd": "wind ambience, soft piano"
+  "scene": "",
+  "camera": "",
+  "motion": "",
+  "lighting": "",
+  "style": "",
+  "audio": "",
+  "color_pipeline": {
+    "look_intent": "",
+    "working_assumption": "",
+    "output_transform": "SDR Rec.709 | HDR PQ | theatrical | social",
+    "show_lut_or_cdl_notes": "",
+    "qc_notes": []
   },
-  "lock": ["character identity", "background"],
-  "exit": "freeze on smile, 0.5s"
+  "subtitle_plan": {
+    "subtitles": false,
+    "sdh": false,
+    "forced_narrative": false,
+    "dubbing": false,
+    "textless_required": false,
+    "languages": []
+  },
+  "audio_deliverables": {
+    "full_mix": true,
+    "stems": [],
+    "m_and_e": false,
+    "loudness_target": "",
+    "sync_cues": []
+  },
+  "delivery": {
+    "frame_rate": "",
+    "resolution": "",
+    "aspect_ratio": "",
+    "safe_area": "",
+    "version_name": "",
+    "qc_checks": []
+  },
+  "safety_notes": [],
+  "final_prompt": ""
 }
 ```
 
-## Field Reference
-
-| Field | Values | Required |
-|---|---|---|
-| `meta.mode` | `t2v` `i2v` `v2v` `r2v` | yes |
-| `meta.level` | `1` `2` `3` `4` | yes |
-| `meta.dur` | integer, seconds | yes |
-| `meta.ar` | `16:9` `9:16` `4:3` `3:4` `21:9` `1:1` | yes |
-| `meta.res` | `720p` `1080p` `2k` | yes |
-| `meta.seed` | integer or omit | no |
-| `ref.*` | `@TagN` strings or omit | no |
-| `shot.subj` | noun phrase | yes |
-| `shot.act` | verb phrase + timing | yes |
-| `shot.cam` | movement + framing | yes |
-| `shot.light` | descriptor | recommended |
-| `shot.style` | 1–3 tokens | recommended |
-| `shot.snd` | ambient + sfx + music | no |
-| `lock` | array of consistency targets | no |
-| `exit` | last-frame or timing note | no |
-
-## Compiler Output (plain text from above schema)
-
-```
-@Image1 character identity. @Image2 background lock. @Audio1 bgm.
-Young woman in red coat turns, looks up, smiles.
-Slow push-in to MCU.
-Golden backlight, soft fill.
-Cinematic.
-Wind ambience, soft piano.
-Maintain character identity, maintain background. Freeze on smile, 0.5 s.
-```
-
-## Budget Triage (over character limit — cut in this order)
-
-| Priority | Field | Cut rule |
-|---|---|---|
-| 6 (cut last) | `shot.subj` `shot.act` | Never cut |
-| 5 | `ref.*` | Never cut |
-| 4 | `shot.cam` | Compress to 3 words |
-| 3 | `shot.light` | Drop to 1 phrase |
-| 2 | `shot.style` | Reduce to 1 token |
-| 1 (cut first) | `shot.snd` `exit` | Remove entirely |
-
-## Segmented Shot (Level 3–4)
-
-```json
-{
-  "seg": [
-    { "t": "0-4s", "act": "stands still, wind moves coat", "cam": "static wide" },
-    { "t": "4-8s", "act": "turns head slowly",             "cam": "slow push-in" },
-    { "t": "8-10s","act": "direct eye contact, smiles",    "cam": "MCU, locked" }
-  ]
-}
-```
-
-Compiled:
-```
-0–4 s: stands still, wind moves coat. Static wide.
-4–8 s: turns head slowly. Slow push-in.
-8–10 s: direct eye contact, smiles. MCU, locked.
-```
+The JSON wrapper is for planning. The final prompt still needs to read naturally. For professional work, keep the production, shot-list, continuity, localization, audio, color, and delivery fields as handoff metadata; do not cram all of them into the prompt.
